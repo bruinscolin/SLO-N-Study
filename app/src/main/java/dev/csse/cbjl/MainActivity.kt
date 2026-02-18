@@ -1,4 +1,4 @@
-package com.example.slo_n_study
+package dev.csse.cbjl.slo_n_study
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -31,14 +31,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.example.slo_n_study.ui.theme.Slo_n_studyTheme
+import dev.csse.cbjl.slo_n_study.ui.theme.Slo_n_studyTheme
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import org.osmdroid.views.overlay.Marker
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.Alignment
+import android.view.MotionEvent
+import org.osmdroid.views.CustomZoomButtonsController
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,22 +65,18 @@ class MainActivity : ComponentActivity() {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@PreviewScreenSizes
 @Composable
 fun Slo_n_studyApp() {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
     var searchText by rememberSaveable { mutableStateOf("") }
+    var selectedSpot by rememberSaveable { mutableStateOf<StudySpot?>(null) }
+
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
             AppDestinations.entries.forEach {
                 item(
-                    icon = {
-                        Icon(
-                            it.icon,
-                            contentDescription = it.label
-                        )
-                    },
+                    icon = { Icon(it.icon, contentDescription = it.label) },
                     label = { Text(it.label) },
                     selected = it == currentDestination,
                     onClick = { currentDestination = it }
@@ -80,8 +84,10 @@ fun Slo_n_studyApp() {
             }
         }
     ) {
+
         Scaffold(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize(),
             topBar = {
                 Column(
                     modifier = Modifier
@@ -93,15 +99,13 @@ fun Slo_n_studyApp() {
                         style = MaterialTheme.typography.headlineMedium,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
+
                     TextField(
                         value = searchText,
                         onValueChange = { searchText = it },
                         placeholder = { Text("Search...") },
                         leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = "Search"
-                            )
+                            Icon(Icons.Default.Search, contentDescription = "Search")
                         },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
@@ -115,10 +119,31 @@ fun Slo_n_studyApp() {
                 }
             }
         ) { innerPadding ->
-            MapScreen(modifier = Modifier.padding(innerPadding))
+            Box(modifier = Modifier.fillMaxSize()) {
+
+                MapScreen(
+                    modifier = Modifier.padding(innerPadding),
+                    onSpotSelected = { selectedSpot = it }
+                )
+
+                selectedSpot?.let { spot ->
+                    StudySpotPreviewCard(
+                        spot = spot,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(
+                                start = 16.dp,
+                                end = 16.dp,
+                                bottom = 88.dp
+                            )
+                    )
+                }
+            }
+
         }
     }
 }
+
 
 enum class AppDestinations(
     val label: String,
@@ -130,22 +155,124 @@ enum class AppDestinations(
 }
 
 @Composable
-fun MapScreen(modifier: Modifier = Modifier) {
+fun MapScreen(
+    modifier: Modifier = Modifier,
+    onSpotSelected: (StudySpot?) -> Unit
+) {
+    val scope = rememberCoroutineScope()
+
     AndroidView(
         modifier = modifier.fillMaxSize(),
         factory = { context ->
             MapView(context).apply {
                 setTileSource(TileSourceFactory.MAPNIK)
                 setMultiTouchControls(true)
+                setBuiltInZoomControls(true)
 
-                // San Luis Obispo coordinates
-                val sloPoint = GeoPoint(35.2828, -120.6596)
+                zoomController.setVisibility(
+                    CustomZoomButtonsController.Visibility.SHOW_AND_FADEOUT
+                )
+
                 controller.setZoom(14.0)
-                controller.setCenter(sloPoint)
+                controller.setCenter(GeoPoint(35.2828, -120.6596))
+
+                setOnTouchListener { _, event ->
+                    if (event.action == MotionEvent.ACTION_DOWN) {
+                        onSpotSelected(null) // dismiss card
+                    }
+                    false // IMPORTANT: let MapView keep handling gestures
+                }
+
+
+                post {
+                    val box = boundingBox
+
+                    scope.launch {
+                        val spots = fetchStudySpots(
+                            south = box.latSouth,
+                            west = box.lonWest,
+                            north = box.latNorth,
+                            east = box.lonEast
+                        )
+
+                        spots.forEach { spot ->
+                            val marker = Marker(this@apply).apply {
+                                position = GeoPoint(spot.lat, spot.lon)
+                                title = spot.name
+                                setOnMarkerClickListener { marker, mapView ->
+                                    // zoom + center smoothly on the marker
+                                    mapView.controller.animateTo(marker.position)
+
+                                    val currentZoom = mapView.zoomLevelDouble
+                                    if (currentZoom < 16.5) {
+                                        mapView.controller.setZoom(17.0)
+                                    }
+
+                                    onSpotSelected(spot)
+                                    true
+                                }
+                            }
+                            overlays.add(marker)
+                        }
+
+                        invalidate()
+                    }
+                }
             }
         }
     )
 }
+
+
+@Composable
+fun StudySpotPreviewCard(
+    spot: StudySpot,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .background(
+                color = Color(0xFFEAD7C3), // tan vibe
+                shape = RoundedCornerShape(20.dp)
+            )
+            .padding(16.dp)
+    ) {
+        Text(
+            text = spot.name,
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        if (spot.address != null) {
+            Text(
+                text = spot.address,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.DarkGray
+            )
+        }
+
+        Column(modifier = Modifier.padding(top = 8.dp)) {
+
+            if (spot.hasWifi) {
+                Text("• Free Wi-Fi")
+            }
+
+            if (spot.hasPower) {
+                Text("• Power outlets")
+            }
+
+            if (spot.hasOutdoorSeating) {
+                Text("• Outdoor seating")
+            }
+
+            if (!spot.hasWifi && !spot.hasPower && !spot.hasOutdoorSeating) {
+                Text("• Study-friendly space")
+            }
+        }
+    }
+}
+
 
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {

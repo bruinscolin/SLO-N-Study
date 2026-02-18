@@ -1,6 +1,5 @@
-package com.example.slo_n_study.ui.theme
+package dev.csse.cbjl.slo_n_study.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme

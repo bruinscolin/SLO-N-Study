@@ -1,4 +1,4 @@
-package com.example.slo_n_study.ui.theme
+package dev.csse.cbjl.slo_n_study.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
