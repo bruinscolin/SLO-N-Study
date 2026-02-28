@@ -32,6 +32,7 @@ private val LightColorScheme = lightColorScheme(
     */
 )
 
+
 @Composable
 fun Slo_n_studyTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
