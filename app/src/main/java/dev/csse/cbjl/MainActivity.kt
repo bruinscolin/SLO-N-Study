@@ -36,6 +36,22 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 
 
+
+// what was changed:
+// Used OSMDroid to show the map. OSMDroid displays map tiles from
+// OpenStreetMap, which is a free, open-source map of the world.
+// It lets us zoom, move around, and place markers without needing
+// a Google Maps API key or billing setup.
+// To get the study spots, we used the Overpass API. The Overpass API
+// lets us ask OpenStreetMap for specific places, like cafes and
+// libraries, inside a certain area on the map.
+// When the map loads, we look at its bounding box (the visible area),
+// send those coordinates to Overpass, and get back a list of places.
+// Then we turn those places into markers on the map.
+// So overall, OSMDroid shows the map, Overpass gets the data from
+// OpenStreetMap, and our app connects everything together so the
+// markers update based on what the user types.
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
