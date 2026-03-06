@@ -4,10 +4,10 @@ data class StudySpot(
     val name: String,
     val lat: Double,
     val lon: Double,
-    val address: String?,
-    val hasWifi: Boolean,
-    val hasOutdoorSeating: Boolean,
-    val hasPower: Boolean,
-    val amenity: String?
+    val amenity: String? = null,
+    val address: String? = null,
+    val hasWifi: Boolean = false,
+    val hasPower: Boolean = false,
+    val hasOutdoorSeating: Boolean = false
 )
 

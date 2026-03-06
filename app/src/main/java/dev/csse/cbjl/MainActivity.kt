@@ -1,5 +1,7 @@
 package dev.csse.cbjl.slo_n_study
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.MotionEvent
 import androidx.activity.ComponentActivity
@@ -21,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -34,23 +37,6 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
-
-
-
-// what was changed:
-// Used OSMDroid to show the map. OSMDroid displays map tiles from
-// OpenStreetMap, which is a free, open-source map of the world.
-// It lets us zoom, move around, and place markers without needing
-// a Google Maps API key or billing setup.
-// To get the study spots, we used the Overpass API. The Overpass API
-// lets us ask OpenStreetMap for specific places, like cafes and
-// libraries, inside a certain area on the map.
-// When the map loads, we look at its bounding box (the visible area),
-// send those coordinates to Overpass, and get back a list of places.
-// Then we turn those places into markers on the map.
-// So overall, OSMDroid shows the map, Overpass gets the data from
-// OpenStreetMap, and our app connects everything together so the
-// markers update based on what the user types.
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,10 +52,9 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun Slo_n_studyApp() {
-
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
     var searchText by rememberSaveable { mutableStateOf("") }
-    var selectedSpot by rememberSaveable { mutableStateOf<StudySpot?>(null) }
+    var selectedSpot by remember { mutableStateOf<StudySpot?>(null) }
     var studySpots by remember { mutableStateOf<List<StudySpot>>(emptyList()) }
 
     val suggestions =
@@ -90,19 +75,16 @@ fun Slo_n_studyApp() {
             }
         }
     ) {
-
         Scaffold(
             modifier = Modifier
                 .fillMaxSize()
                 .background(CoffeeCream),
             topBar = {
-
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 20.dp)
                 ) {
-
                     Text(
                         text = "SLO n Study",
                         style = MaterialTheme.typography.headlineLarge,
@@ -119,8 +101,7 @@ fun Slo_n_studyApp() {
                         leadingIcon = {
                             Icon(Icons.Default.Search, contentDescription = null)
                         },
-                        modifier = Modifier
-                            .fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = RoundedCornerShape(40.dp),
                         colors = TextFieldDefaults.colors(
@@ -144,11 +125,11 @@ fun Slo_n_studyApp() {
                                         text = {
                                             Column {
                                                 Text(
-                                                    spot.name,
+                                                    text = spot.name,
                                                     color = CoffeeMocha
                                                 )
                                                 Text(
-                                                    spot.amenity ?: "",
+                                                    text = spot.amenity ?: "",
                                                     color = WarmGray,
                                                     fontSize = 12.sp
                                                 )
@@ -166,9 +147,7 @@ fun Slo_n_studyApp() {
                 }
             }
         ) { innerPadding ->
-
             Box(modifier = Modifier.fillMaxSize()) {
-
                 MapScreen(
                     modifier = Modifier.padding(innerPadding),
                     searchText = searchText,
@@ -176,15 +155,13 @@ fun Slo_n_studyApp() {
                     onSpotsLoaded = { studySpots = it },
                     onSpotSelected = { selectedSpot = it }
                 )
+            }
 
-                selectedSpot?.let { spot ->
-                    StudySpotPreviewCard(
-                        spot = spot,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(start = 16.dp, end = 16.dp, bottom = 88.dp)
-                    )
-                }
+            if (selectedSpot != null) {
+                StudySpotBottomSheet(
+                    spot = selectedSpot!!,
+                    onDismiss = { selectedSpot = null }
+                )
             }
         }
     }
@@ -207,15 +184,12 @@ fun MapScreen(
     onSpotsLoaded: (List<StudySpot>) -> Unit,
     onSpotSelected: (StudySpot?) -> Unit
 ) {
-
     val scope = rememberCoroutineScope()
 
     AndroidView(
         modifier = modifier.fillMaxSize(),
         factory = { context ->
-
             MapView(context).apply {
-
                 setTileSource(TileSourceFactory.MAPNIK)
                 setMultiTouchControls(true)
 
@@ -235,7 +209,7 @@ fun MapScreen(
                 }
 
                 post {
-                    val box = boundingBox
+                    val box = projection.boundingBox
                     scope.launch {
                         val spots = fetchStudySpots(
                             south = box.latSouth,
@@ -248,19 +222,17 @@ fun MapScreen(
                 }
             }
         },
-
         update = { mapView ->
-
             val filteredSpots =
                 if (searchText.isBlank()) studySpots
                 else studySpots.filter {
                     it.name.contains(searchText, ignoreCase = true)
                 }
+            if (studySpots.isEmpty()) return@AndroidView
 
-            mapView.overlays.removeAll { it is Marker }
+            mapView.overlays.removeIf { it is Marker }
 
             filteredSpots.forEach { spot ->
-
                 val marker = Marker(mapView).apply {
                     position = GeoPoint(spot.lat, spot.lon)
                     title = spot.name
@@ -283,35 +255,88 @@ fun MapScreen(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StudySpotPreviewCard(
+fun StudySpotBottomSheet(
     spot: StudySpot,
-    modifier: Modifier
+    onDismiss: () -> Unit
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Color.White, RoundedCornerShape(32.dp))
-            .padding(20.dp)
+    val sheetState = rememberModalBottomSheetState()
+    val context = LocalContext.current
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = Color.White
     ) {
-
-        Text(
-            text = spot.name,
-            style = MaterialTheme.typography.titleLarge,
-            color = CoffeeMocha
-        )
-
-        if (spot.address != null) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+        ) {
             Text(
-                text = spot.address,
-                color = WarmGray
+                text = spot.name,
+                style = MaterialTheme.typography.headlineSmall,
+                color = CoffeeMocha
             )
+
+            if (spot.address != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = spot.address,
+                    color = WarmGray
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (spot.hasWifi) {
+                Text("Free Wi-Fi")
+                Spacer(modifier = Modifier.height(6.dp))
+            }
+
+            if (spot.hasPower) {
+                Text("Power outlets")
+                Spacer(modifier = Modifier.height(6.dp))
+            }
+
+            if (spot.hasOutdoorSeating) {
+                Text("Outdoor seating")
+                Spacer(modifier = Modifier.height(6.dp))
+            }
+
+            if (!spot.hasWifi && !spot.hasPower && !spot.hasOutdoorSeating) {
+                Text("📖 Study-friendly space")
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
+                onClick = {
+
+                    onDismiss()
+
+                    val gmmIntentUri =
+                        Uri.parse("google.navigation:q=${spot.lat},${spot.lon}")
+
+                    val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+
+                    try {
+                        context.startActivity(mapIntent)
+                    } catch (_: Exception) {
+                        val fallbackUri =
+                            Uri.parse("geo:${spot.lat},${spot.lon}?q=${spot.lat},${spot.lon}(${spot.name})")
+
+                        context.startActivity(Intent(Intent.ACTION_VIEW, fallbackUri))
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Text("Get Directions")
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (spot.hasWifi) Text("Free Wi-Fi")
-        if (spot.hasPower) Text("Power outlets")
-        if (spot.hasOutdoorSeating) Text("Outdoor seating")
     }
 }

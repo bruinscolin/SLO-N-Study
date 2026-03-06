@@ -5,7 +5,6 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
-import java.net.URLEncoder
 
 suspend fun fetchStudySpots(
     south: Double,
@@ -23,54 +22,60 @@ suspend fun fetchStudySpots(
         out;
     """.trimIndent()
 
-    val url =
-        "https://overpass-api.de/api/interpreter?data=${URLEncoder.encode(query, "UTF-8")}"
+    try {
+        val url = URL("https://overpass-api.de/api/interpreter")
+        val connection = url.openConnection() as HttpURLConnection
 
-    val connection = URL(url).openConnection() as HttpURLConnection
-    connection.requestMethod = "GET"
+        connection.requestMethod = "POST"
+        connection.doOutput = true
 
-    val response = connection.inputStream.bufferedReader().readText()
-    val json = JSONObject(response)
-    val elements = json.getJSONArray("elements")
+        connection.outputStream.use {
+            it.write(query.toByteArray())
+        }
 
-    val spots = mutableListOf<StudySpot>()
+        val response = connection.inputStream.bufferedReader().readText()
 
-    for (i in 0 until elements.length()) {
-        val el = elements.getJSONObject(i)
-        val tags = el.optJSONObject("tags") ?: continue
+        val json = JSONObject(response)
+        val elements = json.getJSONArray("elements")
 
-        val hasWifi =
-            tags.optString("internet_access") == "wlan" ||
-                    tags.optString("internet_access") == "yes"
+        val spots = mutableListOf<StudySpot>()
 
-        val hasOutdoorSeating =
-            tags.optString("outdoor_seating") == "yes"
+        for (i in 0 until elements.length()) {
 
-        val hasPower =
-            tags.optString("power_supply") == "yes" ||
-                    tags.optString("socket") == "yes"
+            val element = elements.getJSONObject(i)
 
-        val amenity = tags.optString("amenity", null)
+            val lat = element.getDouble("lat")
+            val lon = element.getDouble("lon")
 
-        val name = tags.optString("name", null) ?: continue
-        val lat = el.getDouble("lat")
-        val lon = el.getDouble("lon")
-        val address = tags.optString("addr:street", null)
+            val tags = element.optJSONObject("tags")
 
-        spots.add(
-            StudySpot(
-                name = name,
-                lat = lat,
-                lon = lon,
-                address = address,
-                hasWifi = hasWifi,
-                hasOutdoorSeating = hasOutdoorSeating,
-                hasPower = hasPower,
-                amenity = amenity
+            val name = tags?.optString("name") ?: "Study Spot"
+            val amenity = tags?.optString("amenity")
+
+            val wifi = tags?.optString("internet_access") == "wlan"
+            val power = tags?.optString("socket") != null
+            val outdoor = tags?.optString("outdoor_seating") == "yes"
+
+            spots.add(
+                StudySpot(
+                    name = name,
+                    lat = lat,
+                    lon = lon,
+                    amenity = amenity,
+                    address = null,
+                    hasWifi = wifi,
+                    hasPower = power,
+                    hasOutdoorSeating = outdoor
+                )
             )
-        )
+        }
 
+        connection.disconnect()
+
+        return@withContext spots
+
+    } catch (e: Exception) {
+        e.printStackTrace()
+        return@withContext emptyList()
     }
-
-    spots
 }
