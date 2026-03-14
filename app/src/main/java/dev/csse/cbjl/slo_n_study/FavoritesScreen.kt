@@ -111,13 +111,14 @@ fun FavoritesScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(CoffeeCream)
+            .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
             .padding(horizontal = 20.dp, vertical = 20.dp)
     ) {
         Text(
             text = "Favorites",
             style = MaterialTheme.typography.headlineLarge,
-            color = CoffeeMocha,
+            color = MaterialTheme.colorScheme.onBackground,
             letterSpacing = 1.sp
         )
 
@@ -138,12 +139,12 @@ fun FavoritesScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = "No favorites yet",
-                        color = WarmGray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
                         text = "Tap the heart on a study spot to save it here.",
-                        color = WarmGray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp
                     )
                 }
@@ -169,7 +170,9 @@ fun FavoriteSpotCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -182,7 +185,7 @@ fun FavoriteSpotCard(
                 Text(
                     text = spot.name,
                     style = MaterialTheme.typography.titleMedium,
-                    color = CoffeeMocha,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -190,7 +193,7 @@ fun FavoriteSpotCard(
                 if (spot.address != null) {
                     Text(
                         text = spot.address,
-                        color = WarmGray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -200,7 +203,7 @@ fun FavoriteSpotCard(
                 if (spot.amenity != null) {
                     Text(
                         text = spot.amenity,
-                        color = WarmGray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp
                     )
                 }
@@ -229,13 +232,13 @@ fun FavoriteSpotCard(
 fun AmenityChip(label: String) {
     Surface(
         shape = RoundedCornerShape(50),
-        color = CoffeeCream
+        color = MaterialTheme.colorScheme.secondaryContainer
     ) {
         Text(
             text = label,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             fontSize = 11.sp,
-            color = CoffeeMocha
+            color = MaterialTheme.colorScheme.onSecondaryContainer
         )
     }
 }
@@ -253,7 +256,7 @@ fun FavoriteToggleButton(
         Icon(
             imageVector = if (isFav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
             contentDescription = if (isFav) "Remove from favorites" else "Add to favorites",
-            tint = CoffeeMocha
+            tint = MaterialTheme.colorScheme.primary
         )
     }
 }

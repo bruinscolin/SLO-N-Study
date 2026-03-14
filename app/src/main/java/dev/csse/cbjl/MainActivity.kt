@@ -11,11 +11,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.*
@@ -39,6 +39,8 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import dev.csse.cbjl.slo_n_study.ui.theme.Slo_n_studyTheme
+import androidx.compose.foundation.isSystemInDarkTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,13 +51,24 @@ class MainActivity : ComponentActivity() {
         val repository = FavoritesRepository(applicationContext)
 
         setContent {
-            Slo_n_studyApp(repository)
+
+            val themeViewModel: ThemeViewModel = viewModel()
+            val darkMode by themeViewModel.darkMode.collectAsState()
+
+            Slo_n_studyTheme(
+                darkTheme = darkMode
+            ) {
+                Slo_n_studyApp(repository, themeViewModel)
+            }
         }
     }
 }
 
 @Composable
-fun Slo_n_studyApp(repository: FavoritesRepository) {
+fun Slo_n_studyApp(
+    repository: FavoritesRepository,
+    themeViewModel: ThemeViewModel
+) {
 
     val favoritesViewModel: FavoritesViewModel = viewModel(
         factory = FavoritesViewModel.factory(repository)
@@ -88,32 +101,26 @@ fun Slo_n_studyApp(repository: FavoritesRepository) {
                 FavoritesScreen(favoritesViewModel = favoritesViewModel)
             }
 
-            AppDestinations.PROFILE -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Profile coming soon", color = WarmGray)
-                }
+            AppDestinations.SETTINGS -> {
+                SettingsScreen(themeViewModel)
             }
 
             AppDestinations.HOME -> {
                 Scaffold(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(CoffeeCream),
+                        .background(MaterialTheme.colorScheme.background),
                     topBar = {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(CoffeeCream)
-                                .windowInsetsPadding(WindowInsets.statusBars)
+                                .background(MaterialTheme.colorScheme.background)                                .windowInsetsPadding(WindowInsets.statusBars)
                                 .padding(horizontal = 20.dp, vertical = 20.dp)
                         ) {
                             Text(
                                 text = "SLO n Study",
                                 style = MaterialTheme.typography.headlineLarge,
-                                color = CoffeeMocha,
+                                color = MaterialTheme.colorScheme.primary,
                                 letterSpacing = 1.sp
                             )
 
@@ -130,8 +137,8 @@ fun Slo_n_studyApp(repository: FavoritesRepository) {
                                 singleLine = true,
                                 shape = RoundedCornerShape(40.dp),
                                 colors = TextFieldDefaults.colors(
-                                    focusedContainerColor = Color.White,
-                                    unfocusedContainerColor = Color.White,
+                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                                     focusedIndicatorColor = Color.Transparent,
                                     unfocusedIndicatorColor = Color.Transparent
                                 )
@@ -142,17 +149,23 @@ fun Slo_n_studyApp(repository: FavoritesRepository) {
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(top = 4.dp),
-                                    shape = RoundedCornerShape(20.dp)
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface
+                                    )
                                 ) {
                                     Column {
                                         suggestions.forEach { spot ->
                                             DropdownMenuItem(
                                                 text = {
                                                     Column {
-                                                        Text(text = spot.name, color = CoffeeMocha)
+                                                        Text(
+                                                            text = spot.name,
+                                                            color = MaterialTheme.colorScheme.onSurface
+                                                        )
                                                         Text(
                                                             text = spot.amenity ?: "",
-                                                            color = WarmGray,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                             fontSize = 12.sp
                                                         )
                                                     }
@@ -175,7 +188,7 @@ fun Slo_n_studyApp(repository: FavoritesRepository) {
                             searchText = searchText,
                             studySpots = studySpots,
                             onSpotsLoaded = { studySpots = it },
-                            onSpotSelected = { selectedSpot = it }
+                            onSpotSelected = { selectedSpot = it },
                         )
                     }
 
@@ -198,23 +211,27 @@ enum class AppDestinations(
 ) {
     HOME("Home", Icons.Default.Home),
     FAVORITES("Favorites", Icons.Default.Favorite),
-    PROFILE("Profile", Icons.Default.AccountBox),
+    SETTINGS("Settings", Icons.Default.Settings),
 }
-
 @Composable
 fun MapScreen(
     modifier: Modifier,
     searchText: String,
     studySpots: List<StudySpot>,
     onSpotsLoaded: (List<StudySpot>) -> Unit,
-    onSpotSelected: (StudySpot?) -> Unit
+    onSpotSelected: (StudySpot?) -> Unit,
 ) {
+
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     AndroidView(
         modifier = modifier.fillMaxSize(),
-        factory = { context ->
-            MapView(context).apply {
+
+        factory = { ctx ->
+
+            MapView(ctx).apply {
+
                 setTileSource(TileSourceFactory.MAPNIK)
                 setMultiTouchControls(true)
 
@@ -233,49 +250,66 @@ fun MapScreen(
                     false
                 }
 
+                // Fetch study spots once map is ready
                 post {
+
                     val box = projection.boundingBox
+
                     scope.launch {
+
                         val spots = fetchStudySpots(
                             south = box.latSouth,
                             west = box.lonWest,
                             north = box.latNorth,
                             east = box.lonEast
                         )
-                        onSpotsLoaded(spots)
+
+                        if (spots.isNotEmpty()) {
+                            onSpotsLoaded(spots)
+                        }
                     }
                 }
             }
         },
-        update = { mapView ->
+
+        update = { map ->
+
             val filteredSpots =
                 if (searchText.isBlank()) studySpots
                 else studySpots.filter {
                     it.name.contains(searchText, ignoreCase = true)
                 }
-            if (studySpots.isEmpty()) return@AndroidView
 
-            mapView.overlays.removeIf { it is Marker }
+            if (filteredSpots.isEmpty()) return@AndroidView
 
+            // Remove existing markers only
+            map.overlays.removeAll { it is Marker }
+
+            // Add markers
             filteredSpots.forEach { spot ->
-                val marker = Marker(mapView).apply {
+
+                val marker = Marker(map).apply {
+
                     position = GeoPoint(spot.lat, spot.lon)
                     title = spot.name
 
                     setOnMarkerClickListener { clickedMarker, clickedMap ->
+
                         clickedMap.controller.animateTo(clickedMarker.position)
+
                         if (clickedMap.zoomLevelDouble < 16.5) {
                             clickedMap.controller.setZoom(17.0)
                         }
+
                         onSpotSelected(spot)
                         true
                     }
                 }
 
-                mapView.overlays.add(marker)
+                map.overlays.add(marker)
             }
 
-            mapView.invalidate()
+            map.invalidate()
         }
     )
 }
@@ -295,7 +329,7 @@ fun StudySpotBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Color.White
+        containerColor = MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
@@ -310,21 +344,24 @@ fun StudySpotBottomSheet(
                 Text(
                     text = spot.name,
                     style = MaterialTheme.typography.headlineSmall,
-                    color = CoffeeMocha,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
                 IconButton(onClick = { favoritesViewModel.toggleFavorite(spot) }) {
                     Icon(
                         imageVector = if (isFav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         contentDescription = if (isFav) "Remove from favorites" else "Add to favorites",
-                        tint = CoffeeMocha
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
 
             if (spot.address != null) {
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = spot.address, color = WarmGray)
+                Text(
+                    text = spot.address,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -355,7 +392,8 @@ fun StudySpotBottomSheet(
                     try {
                         context.startActivity(mapIntent)
                     } catch (_: Exception) {
-                        val fallbackUri = Uri.parse("geo:${spot.lat},${spot.lon}?q=${spot.lat},${spot.lon}(${spot.name})")
+                        val fallbackUri =
+                            Uri.parse("geo:${spot.lat},${spot.lon}?q=${spot.lat},${spot.lon}(${spot.name})")
                         context.startActivity(Intent(Intent.ACTION_VIEW, fallbackUri))
                     }
                 },
