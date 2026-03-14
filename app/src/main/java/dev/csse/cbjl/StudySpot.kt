@@ -1,5 +1,8 @@
 package dev.csse.cbjl.slo_n_study
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class StudySpot(
     val name: String,
     val lat: Double,

@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -27,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.csse.cbjl.slo_n_study.ui.theme.CoffeeCream
 import dev.csse.cbjl.slo_n_study.ui.theme.CoffeeMocha
 import dev.csse.cbjl.slo_n_study.ui.theme.WarmGray
@@ -44,14 +46,20 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         Configuration.getInstance().userAgentValue = packageName
 
+        val repository = FavoritesRepository(applicationContext)
+
         setContent {
-            Slo_n_studyApp()
+            Slo_n_studyApp(repository)
         }
     }
 }
 
 @Composable
-fun Slo_n_studyApp() {
+fun Slo_n_studyApp(repository: FavoritesRepository) {
+
+    val favoritesViewModel: FavoritesViewModel = viewModel(
+        factory = FavoritesViewModel.factory(repository)
+    )
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
     var searchText by rememberSaveable { mutableStateOf("") }
     var selectedSpot by remember { mutableStateOf<StudySpot?>(null) }
@@ -75,93 +83,108 @@ fun Slo_n_studyApp() {
             }
         }
     ) {
-        Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(CoffeeCream),
-            topBar = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 20.dp)
+        when (currentDestination) {
+            AppDestinations.FAVORITES -> {
+                FavoritesScreen(favoritesViewModel = favoritesViewModel)
+            }
+
+            AppDestinations.PROFILE -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "SLO n Study",
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = CoffeeMocha,
-                        letterSpacing = 1.sp
-                    )
+                    Text("Profile coming soon", color = WarmGray)
+                }
+            }
 
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    TextField(
-                        value = searchText,
-                        onValueChange = { searchText = it },
-                        placeholder = { Text("Find your perfect study spot") },
-                        leadingIcon = {
-                            Icon(Icons.Default.Search, contentDescription = null)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = RoundedCornerShape(40.dp),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        )
-                    )
-
-                    if (suggestions.isNotEmpty()) {
-                        Card(
+            AppDestinations.HOME -> {
+                Scaffold(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(CoffeeCream),
+                    topBar = {
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 4.dp),
-                            shape = RoundedCornerShape(20.dp)
+                                .padding(horizontal = 20.dp, vertical = 20.dp)
                         ) {
-                            Column {
-                                suggestions.forEach { spot ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Column {
-                                                Text(
-                                                    text = spot.name,
-                                                    color = CoffeeMocha
-                                                )
-                                                Text(
-                                                    text = spot.amenity ?: "",
-                                                    color = WarmGray,
-                                                    fontSize = 12.sp
-                                                )
-                                            }
-                                        },
-                                        onClick = {
-                                            searchText = spot.name
-                                            selectedSpot = spot
+                            Text(
+                                text = "SLO n Study",
+                                style = MaterialTheme.typography.headlineLarge,
+                                color = CoffeeMocha,
+                                letterSpacing = 1.sp
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            TextField(
+                                value = searchText,
+                                onValueChange = { searchText = it },
+                                placeholder = { Text("Find your perfect study spot") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Search, contentDescription = null)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                shape = RoundedCornerShape(40.dp),
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.White,
+                                    unfocusedContainerColor = Color.White,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent
+                                )
+                            )
+
+                            if (suggestions.isNotEmpty()) {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 4.dp),
+                                    shape = RoundedCornerShape(20.dp)
+                                ) {
+                                    Column {
+                                        suggestions.forEach { spot ->
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Column {
+                                                        Text(text = spot.name, color = CoffeeMocha)
+                                                        Text(
+                                                            text = spot.amenity ?: "",
+                                                            color = WarmGray,
+                                                            fontSize = 12.sp
+                                                        )
+                                                    }
+                                                },
+                                                onClick = {
+                                                    searchText = spot.name
+                                                    selectedSpot = spot
+                                                }
+                                            )
                                         }
-                                    )
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            }
-        ) { innerPadding ->
-            Box(modifier = Modifier.fillMaxSize()) {
-                MapScreen(
-                    modifier = Modifier.padding(innerPadding),
-                    searchText = searchText,
-                    studySpots = studySpots,
-                    onSpotsLoaded = { studySpots = it },
-                    onSpotSelected = { selectedSpot = it }
-                )
-            }
+                ) { innerPadding ->
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        MapScreen(
+                            modifier = Modifier.padding(innerPadding),
+                            searchText = searchText,
+                            studySpots = studySpots,
+                            onSpotsLoaded = { studySpots = it },
+                            onSpotSelected = { selectedSpot = it }
+                        )
+                    }
 
-            if (selectedSpot != null) {
-                StudySpotBottomSheet(
-                    spot = selectedSpot!!,
-                    onDismiss = { selectedSpot = null }
-                )
+                    if (selectedSpot != null) {
+                        StudySpotBottomSheet(
+                            spot = selectedSpot!!,
+                            favoritesViewModel = favoritesViewModel,
+                            onDismiss = { selectedSpot = null }
+                        )
+                    }
+                }
             }
         }
     }
@@ -259,10 +282,13 @@ fun MapScreen(
 @Composable
 fun StudySpotBottomSheet(
     spot: StudySpot,
+    favoritesViewModel: FavoritesViewModel,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState()
     val context = LocalContext.current
+    val favorites by favoritesViewModel.favorites.collectAsState()
+    val isFav = favorites.any { it.name == spot.name && it.lat == spot.lat && it.lon == spot.lon }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -274,18 +300,29 @@ fun StudySpotBottomSheet(
                 .fillMaxWidth()
                 .padding(24.dp)
         ) {
-            Text(
-                text = spot.name,
-                style = MaterialTheme.typography.headlineSmall,
-                color = CoffeeMocha
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = spot.name,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = CoffeeMocha,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = { favoritesViewModel.toggleFavorite(spot) }) {
+                    Icon(
+                        imageVector = if (isFav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = if (isFav) "Remove from favorites" else "Add to favorites",
+                        tint = CoffeeMocha
+                    )
+                }
+            }
 
             if (spot.address != null) {
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = spot.address,
-                    color = WarmGray
-                )
+                Text(text = spot.address, color = WarmGray)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -294,17 +331,14 @@ fun StudySpotBottomSheet(
                 Text("Free Wi-Fi")
                 Spacer(modifier = Modifier.height(6.dp))
             }
-
             if (spot.hasPower) {
                 Text("Power outlets")
                 Spacer(modifier = Modifier.height(6.dp))
             }
-
             if (spot.hasOutdoorSeating) {
                 Text("Outdoor seating")
                 Spacer(modifier = Modifier.height(6.dp))
             }
-
             if (!spot.hasWifi && !spot.hasPower && !spot.hasOutdoorSeating) {
                 Text("📖 Study-friendly space")
             }
@@ -313,20 +347,13 @@ fun StudySpotBottomSheet(
 
             Button(
                 onClick = {
-
                     onDismiss()
-
-                    val gmmIntentUri =
-                        Uri.parse("google.navigation:q=${spot.lat},${spot.lon}")
-
+                    val gmmIntentUri = Uri.parse("google.navigation:q=${spot.lat},${spot.lon}")
                     val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
-
                     try {
                         context.startActivity(mapIntent)
                     } catch (_: Exception) {
-                        val fallbackUri =
-                            Uri.parse("geo:${spot.lat},${spot.lon}?q=${spot.lat},${spot.lon}(${spot.name})")
-
+                        val fallbackUri = Uri.parse("geo:${spot.lat},${spot.lon}?q=${spot.lat},${spot.lon}(${spot.name})")
                         context.startActivity(Intent(Intent.ACTION_VIEW, fallbackUri))
                     }
                 },
