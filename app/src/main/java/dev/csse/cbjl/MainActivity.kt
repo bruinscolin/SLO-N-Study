@@ -29,9 +29,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
-import dev.csse.cbjl.slo_n_study.ui.theme.CoffeeCream
-import dev.csse.cbjl.slo_n_study.ui.theme.CoffeeMocha
-import dev.csse.cbjl.slo_n_study.ui.theme.WarmGray
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -40,7 +37,6 @@ import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import dev.csse.cbjl.slo_n_study.ui.theme.Slo_n_studyTheme
-import androidx.compose.foundation.isSystemInDarkTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
