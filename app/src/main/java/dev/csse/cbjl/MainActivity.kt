@@ -106,6 +106,8 @@ fun Slo_n_studyApp(repository: FavoritesRepository) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .background(CoffeeCream)
+                                .windowInsetsPadding(WindowInsets.statusBars)
                                 .padding(horizontal = 20.dp, vertical = 20.dp)
                         ) {
                             Text(
