@@ -47,6 +47,33 @@ This app uses several Android and Jetpack Compose features:
   - Lifecycle/ViewModel
   - Accompanist
 
+---
+
+## Requirements / Setup Notes
+
+To run this app, the following may be needed:
+
+- **Android Studio** installed
+- **Minimum SDK version:** 24
+- **Target SDK version:** 36
+- A device or emulator with:
+  - **Internet access**
+  - **Location services enabled**
+  - Permission to allow the app to access the location
+
+If location permission is denied, some features may not work as expected.
+
+---
+
+## How to Run
+
+1. Clone the repository
+2. Open the project in Android Studio
+3. Let Gradle sync dependencies
+4. Run the app on an emulator or Android device
+5. Grant location permissions when prompted
+
+
 --- 
 ## Above and Beyond / Additional Notes
 
