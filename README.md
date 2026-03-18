@@ -1,6 +1,19 @@
 # SLO-N-Study
 App that provides ideal study locations for students in San Luis Obispo, CA. Our app has search functionality at the top, that lets you look for certain spots you would want to go to around town. By adding a spot to the "Favorites" tab, you can easily find locations that you like to frequest, and easily access them again. When you decide on a spot you want to go to, click on the "Get Directions" button to automatically be on the way to your destination.
 
+---
+
+## Design Mockups
+Example:
+- `design-sketches/home.jpg`
+- `design-sketches/map.jpg`
+- `design-sketches/details.jpg`
+
+![Home Sketch](design-sketches/home.jpg)
+![Map Sketch](design-sketches/map.jpg)
+![Details Sketch](design-sketches/details.jpg)
+
+--- 
 
 ## Features Used
 
