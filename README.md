@@ -9,6 +9,8 @@ App that provides ideal study locations for students in San Luis Obispo, CA. Our
 ![Details Sketch](design-sketches/tab.png)
 ![Direction Sketch](design-sketches/direction.png)
 
+## note this was before we added favorites and settings
+
 --- 
 
 ## Features Used
