@@ -77,13 +77,8 @@ If location permission is denied, some features may not work as expected.
 --- 
 ## Above and Beyond / Additional Notes
 
-Some parts of this project that went beyond the basic requirements include:
-
-- Integrating a real map instead of using a static layout
-- Pulling study spot data from external sources
-- Making the app useful for real students in San Luis Obispo
-- Combining location-based features with a clean Jetpack Compose interface
-- Supporting directions/navigation to a selected study location
+- Both members of the team attended the majority of lectures over the course of the quarter
+- Attended almost every lab session whenever we had not already finished the lab for the week
 
 ---
 ## Authors
