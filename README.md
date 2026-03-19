@@ -4,11 +4,6 @@ App that provides ideal study locations for students in San Luis Obispo, CA. Our
 ---
 
 ## Design Mockups
-Example:
-- `design-sketches/home.png`
-- `design-sketches/direction.png`
-- `design-sketches/tab.png`
-
 ![Home Sketch](design-sketches/home.png)
 ![Details Sketch](design-sketches/tab.png)
 ![Direction Sketch](design-sketches/direction.png)
